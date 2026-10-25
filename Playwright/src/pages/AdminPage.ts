@@ -1,109 +1,154 @@
+
 import { Page, Locator, expect } from "@playwright/test";
+import { stat } from "fs";
+import { commonMethods } from "../tests/commonMethods";
 
 /**
  * Page Object Model for the Admin Page
  */
 export default class AdminPage {
-  readonly page: Page;
+    readonly page: Page;
+    private common = new commonMethods();
+    private jobbtn: Locator;
+    private jobCatbtn: Locator;
 
-  //  Locators for various elements on the Admin page
-  private AdminLink: Locator;              
-  private editbutton: Locator;             
-  private empName: Locator;                 
-  private empNameSubmit: Locator;          
-  private sortUsername: Locator;          
-  private sortAsc: Locator;                 
-  private upgradeButton: Locator;          
-  private maintitle: Locator;               
-  private admindropdown: Locator;           
-  private adminSearch: Locator;            
-  private searchButton: Locator;            
-  private userRoleElements: Locator;        
-  private username: Locator;
-  private usernamelist: Locator;                
+    // Locators for various elements on the Admin page
+    private AdminLink: Locator;
+    private EmpStatusEditbutton: Locator;
+    private fillName: Locator;
+    private saveBtn: Locator;
+    private Addbtn: Locator;
+    private sortAsc: Locator;
+    private upgradeButton: Locator;
+    private EmpStatus: Locator;
+    private adminDropdown: Locator;
+    private adminSearch: Locator;
+    private searchButton: Locator;
+    private userRoleElements: Locator;
+    private username: Locator;
+    private usernameList: Locator;
+    private configTab: Locator;
+    private modulesSubTab: Locator;
 
-  constructor(page: Page) {
-    this.page = page;
+    constructor(page: Page) {
+        this.page = page;
 
-    // ✅ Initialize all locators
-    this.AdminLink = page.locator('text=Admin');
-    this.editbutton = page.locator("(//div[@class='oxd-table-cell-actions']/button[2])[1]");
-    this.empName = page.locator('input.oxd-input.oxd-input--focus');
-    this.empNameSubmit = page.locator("button[type='submit']");
-    this.sortUsername = page.locator("(//i[contains(@class, 'bi-sort-alpha-down')])[1]");
-    this.sortAsc = page.locator("(//span[@class='oxd-text oxd-text--span'][normalize-space()='Ascending'])[1]");
-    this.upgradeButton = this.page.locator("a.orangehrm-upgrade-link");
-    this.maintitle = page.locator(".main-title");
-    this.admindropdown = page.locator("(//div[@class='oxd-select-text oxd-select-text--active'])[1]");
-    this.adminSearch = page.locator('//div[@role="option"][.//span[text()="Admin"]]');
-    this.searchButton = page.locator('text= Search ');
-    this.userRoleElements = page
-      .locator('//div[@role="rowgroup"][2]//div[@role="cell"][3]/div');
+        this.jobbtn = page.locator('//span[normalize-space()="Job"]');
+        this.modulesSubTab = page.locator('//a[normalize-space()="Modules"]');
+        this.configTab = page.locator('//span[normalize-space()="Configuration"]');
+        this.jobCatbtn = page.locator('//a[normalize-space()="Job Categories"]');
 
-    this.username = page.locator("//input[@autocomplete='off']");
-    this.usernamelist = page.locator('//div[@role="row"]//div[@role="cell"][2]/div');
-  }
+        // Initialize all locators
+        this.AdminLink = page.locator('//span[text()="Admin"]');
+        this.EmpStatusEditbutton = page.locator('//i[contains(@class,"bi-pencil-fill")]/parent::button').nth(0);
+        this.fillName = page.locator(".oxd-input").nth(1);
+        this.saveBtn = page.locator('//button[@type="submit"]');
+        this.Addbtn = page.locator('//button[normalize-space()="Add"]');
+        this.sortAsc = page.locator('//span[normalize-space()="Ascending"]');
+        this.upgradeButton = this.page.locator('//a[contains(@class,"orangehrm-upgrade-link")]');
+        this.EmpStatus = page.locator('//a[normalize-space()="Employment Status"]');
+        this.adminDropdown = page.locator('(//div[@class="oxd-select-text-input"])[1]');
+        this.adminSearch = page.locator('//div[@role="option"]/span[text()="Admin"]');
+        this.searchButton = page.locator('//button[normalize-space()="Search"]');
+        this.userRoleElements = page.locator('//div[@class="oxd-table-card"]//div[@role="cell"][3]/div');
+        this.username = page.locator('(//form//input[contains(@class,"oxd-input")])[1]');
+        this.usernameList = page.locator('//div[@class="oxd-table-card"]//div[@role="cell"][2]/div');
+    }
 
-  /**
-   * Clicks the Admin link and the first edit button
-   */
-  public async AdminEdit() {
-    await this.AdminLink.nth(0).click();
-    await this.editbutton.click();
-    await this.page.locator("//h6[text()='Edit User']").waitFor({state:'visible'})
-   const ret = this.page.locator("//h6[text()='Edit User']").innerText();
-   return ret;
+    /**
+     * Opens Admin -> Job -> Employment Status list.
+     */
+    private async openEmploymentStatus() {
+        await this.common.highlightElement(this.AdminLink);
+        await this.AdminLink.click();
+        await this.page.waitForURL(/admin\/viewSystemUsers/);
 
-  }
+        await this.common.highlightElement(this.jobbtn);
+        await this.jobbtn.click();
+        await this.common.highlightElement(this.EmpStatus);
+        await this.EmpStatus.click();
+        await this.page.waitForURL(/admin\/employmentStatus/);
+    }
 
-  /**
-   * Clicks Admin, then sorts usernames in ascending order,
-   * waits for the sorted table, and returns all user roles
-   * @returns string[] of trimmed user role texts
-   */
-  public async adminSortUsername() {
-    await this.AdminLink.nth(0).click();
-    await this.sortUsername.click();
-    await this.sortAsc.click();
+    /**
+     * Edits an Employment Status with the given name
+     * and verifies it is updated in the list.
+     *
+     * @param name - New Employment Status name.
+     */
+    public async EditEmpStatus(name: string) {
+        await this.openEmploymentStatus();
 
-    await this.page.waitForTimeout(2000);
-    await this.page.waitForLoadState('networkidle');
+        await this.common.highlightElement(this.EmpStatusEditbutton);
+        await this.EmpStatusEditbutton.click();
+        await this.page.waitForURL(/admin\/saveEmploymentStatus/);
 
-    const roles = await this.usernamelist.allTextContents();
-    // const trimmedRoles = roles.map(role => role.trim());
-    // return trimmedRoles;
-  }
+        await expect(this.fillName).not.toHaveValue("");
+        await this.common.highlightElement(this.fillName);
+        await this.fillName.fill(name);
+        await this.common.highlightElement(this.saveBtn);
+        await this.saveBtn.click();
 
-  /**
-   * Clicks Admin, then clicks Upgrade and waits for child tab to open,
-   * the URL of the newly opened upgrade page
-   */
-  public async upgrade() {
-    await this.AdminLink.nth(0).click();
-    await this.page.waitForTimeout(2000);
+        await this.page.waitForURL(/admin\/employmentStatus/);
+        await expect(this.page.locator(`//div[text()="${name}"]`)).toBeVisible();
+    }
 
-    const [newPage] = await Promise.all([
-      this.page.context().waitForEvent('page'),
-      this.upgradeButton.click()
-    ]);
-    
-  }
+    /**
+     * Adds a new Employment Status and verifies it is visible in the list.
+     *
+     * @param name - Employment Status name to add.
+     */
+    public async AddEmpstaus(name: string) {
+        await this.openEmploymentStatus();
 
-  /**
-   * Searches for users with "Admin" role selected from dropdown,
-   * clicks Search, and returns the list of user roles shown
-   * @returns string[] of trimmed user roles from the search result
-   */
-  public async adminSearchVerify(){
-    await this.AdminLink.nth(0).click();
-    await this.page.waitForTimeout(1000);
-    await this.admindropdown.click();
-    await this.adminSearch.click();
-    await this.searchButton.click();
-    await this.page.waitForLoadState('networkidle');
-    await this.page.waitForTimeout(1000);
+        await this.common.highlightElement(this.Addbtn);
+        await this.Addbtn.click();
+        await this.page.waitForURL(/admin\/saveEmploymentStatus/);
 
-    const roles = await this.userRoleElements.allTextContents();
-  
-  }
+        await this.common.highlightElement(this.fillName);
+        await this.fillName.fill(name);
+        await this.common.highlightElement(this.saveBtn);
+        await this.saveBtn.click();
+
+        await this.page.waitForURL(/admin\/employmentStatus/);
+        await expect(this.page.locator(`//div[text()="${name}"]`)).toBeVisible();
+    }
+
+    /**
+     * Clicks Admin, then clicks Upgrade and waits for child tab to open,
+     * the URL of the newly opened upgrade page.
+     */
+    public async upgrade() {
+        await this.common.highlightElement(this.AdminLink);
+        await this.AdminLink.click();
+        await this.page.waitForURL(/admin\/viewSystemUsers/);
+
+        await this.common.highlightElement(this.upgradeButton);
+        const [childPage] = await Promise.all([
+            this.page.context().waitForEvent("page"),
+            this.upgradeButton.click(),
+        ]);
+        await childPage.waitForLoadState("domcontentloaded");
+        return childPage.url();
+    }
+
+    /**
+     * Selects "Admin" from the role dropdown, clicks Search,
+     * and returns the list of user roles from results.
+     */
+    public async adminModules() {
+        await this.common.highlightElement(this.AdminLink);
+        await this.AdminLink.click();
+        await this.page.waitForURL(/admin\/viewSystemUsers/);
+
+        await this.common.highlightElement(this.configTab);
+        await this.configTab.click();
+        await this.common.highlightElement(this.modulesSubTab);
+        await this.modulesSubTab.click();
+
+        await this.page.waitForURL(/admin\/viewModules/);
+        const header = this.page.locator('//h6[text()="Module Configuration"]');
+        await expect(header).toBeVisible();
+        return await header.allInnerTexts();
+    }
 }

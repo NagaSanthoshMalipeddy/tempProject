@@ -1,52 +1,71 @@
-import { Locator, Page } from "@playwright/test";
-import path from "path";
 
-// ✅ Resolving the path to the image used for upload
+import { Locator, Page, expect } from "@playwright/test";
+import path from "path";
+import { commonMethods } from "../tests/commonMethods";
+
+// Resolving the path to the image used for upload
 const filePath = path.resolve(__dirname, "../../TestImage.jpg");
 
 /**
  * Page Object Model for the "My Info" section of the application.
  */
 export class MyInfoPage {
-  readonly page: Page;
+    readonly page: Page;
+    private common = new commonMethods();
 
-  //  Locators for elements in the My Info section
-  private Myinfo: Locator;
-  private clickImage: Locator;
-  private uploadButton: Locator;
-  private fileInput: Locator;
-  private ImageSave: Locator;
-  private helpbutton: Locator;
+    // Locators for elements in the My Info section
+    private MyInfo: Locator;
+    private clickImage: Locator;
+    private uploadButton: Locator;
+    private fileInput: Locator;
+    private imageSave: Locator;
+    private helpbutton: Locator;
 
-  constructor(page: Page) {
-    this.page = page;
-    this.Myinfo = page.locator("text=My Info");
-    this.clickImage = page.locator(".employee-image");
-    this.uploadButton = page.locator(".employee-image-action");
-    this.fileInput = page.locator('input[type="file"].oxd-file-input');
-    this.ImageSave = page.locator("button[type='submit']");
-    this.helpbutton = page.locator(
-      "//div[@class='oxd-topbar-body-nav-slot']/button"
-    );
-  }
+    constructor(page: Page) {
+        this.page = page;
+        this.MyInfo = page.locator('//span[text()="My Info"]');
+        this.clickImage = page.locator('//div[@class="orangehrm-edit-employee-image"]//img');
+        this.uploadButton = page.locator('//button[contains(@class,"employee-image-action")]');
+        this.fileInput = page.locator('//input[@type="file"]');
+        this.imageSave = page.locator('//button[@type="submit"]');
+        this.helpbutton = page.locator('//div[@class="oxd-topbar-body-nav-slot"]/button');
+    }
 
-  /**
-   * Navigates to My Info, uploads a profile image, and saves it.
-   */
-  async myinfo() {
-    await this.Myinfo.click(); // Open My Info tab
-    await this.clickImage.click(); // Click on profile image
-    await this.uploadButton.click(); // Trigger upload action
-    await this.fileInput.setInputFiles(filePath); // Upload image from path
-    await this.ImageSave.click(); // Save uploaded image
-  }
+    /**
+     * Navigates to My Info, uploads a profile image, and saves it.
+     */
+    async myInfo() {
+        await this.common.highlightElement(this.MyInfo);
+        await this.MyInfo.click();
+        await this.page.waitForURL(/pim\/viewPersonalDetails/);
 
-  /**
-   * Navigate to the My Info tab and Hover over the help button to verify the tooltip text.
-   */
-  public async helpHover() {
-    await this.Myinfo.click();
-    await this.helpbutton.hover();
-    await this.page.waitForTimeout(4000); // Wait to ensure tooltip loads
-  }
+        await this.common.highlightElement(this.clickImage);
+        await this.clickImage.click();
+        await this.page.waitForURL(/pim\/viewPhotograph/);
+
+        await this.common.highlightElement(this.uploadButton);
+        const [fileChooser] = await Promise.all([
+            this.page.waitForEvent("filechooser"),
+            this.uploadButton.click(),
+        ]);
+        await fileChooser.setFiles(filePath);
+        await expect(this.fileInput).toHaveCount(1);
+
+        await this.common.highlightElement(this.imageSave);
+        await this.imageSave.click();
+    }
+
+    /**
+     * Navigate to the My Info tab and hover over the help button
+     * to verify the tooltip text.
+     */
+    public async helpHover() {
+        await this.common.highlightElement(this.MyInfo);
+        await this.MyInfo.click();
+        await this.page.waitForURL(/pim\/viewPersonalDetails/);
+
+        await this.common.highlightElement(this.helpbutton);
+        await this.helpbutton.hover();
+        return await this.helpbutton.getAttribute("title");
+    }
 }

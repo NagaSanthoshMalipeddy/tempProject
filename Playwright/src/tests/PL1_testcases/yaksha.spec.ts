@@ -1,368 +1,437 @@
 // Import necessary Playwright modules and custom page objects
-import { test } from "playwright/test";
-import { Page, Locator, expect } from "@playwright/test";
+import { test } from "@playwright/test";
+import { Page, BrowserContext, expect } from "@playwright/test";
 import { LoginPage } from "../../pages/LoginPage";
 import AdminPage from "src/pages/AdminPage";
-import buzzpage from "src/pages/buzzPage";
+import buzzPage from "src/pages/buzzPage";
 import { MyInfoPage } from "src/pages/MyInfoPage";
 import { only } from "node:test";
+import { verify } from "crypto";
+let Baseurl: string;
 
-// Test Suite: Yaksha Functional Test Suite
+// Test suite: Yaksha Functional Test Suite
 test.describe("Yaksha Functional Test Suite", () => {
-  let loginPage: LoginPage;
-  let myinfoPage: MyInfoPage;
-  let adminPage: AdminPage;
-  let buzzPage: buzzpage;
+    let loginPage: LoginPage;
+    let myInfoPage: MyInfoPage;
+    let adminPage: AdminPage;
+    let buzzpage: buzzPage;
 
-  // This hook runs before each test to perform initial setup and login
-  test.beforeEach(async ({ page }) => {
-    await page.goto("");
-    loginPage = new LoginPage(page);
-    myinfoPage = new MyInfoPage(page);
-    adminPage = new AdminPage(page);
-    buzzPage = new buzzpage(page);
-    await loginPage.performLogin(); // Perform login before each test
-  });
+    // This hook runs before each test to perform initial setup and login
+    test.beforeEach(async ({ page, baseURL }) => {
+        Baseurl = baseURL!;
+        await page.goto(Baseurl);
+        loginPage = new LoginPage(page);
+        myInfoPage = new MyInfoPage(page);
+        adminPage = new AdminPage(page);
+        buzzpage = new buzzPage(page);
 
-  /*
-  TS-1: Validate successful profile picture upload
+        await loginPage.performLogin(); // Perform login before each test
+    });
 
-  This test navigates to the "My Info" section of the application and performs
-  a profile picture upload. It simulates a real user action of changing the
-  profile image by:
-  
-  - Clicking on the "My Info" tab in the sidebar
-  - Selecting the existing profile image
-  - Triggering the upload option
-  - Uploading a new image from the local file system
-  - Saving the updated profile picture
-  - Return the succesfull update msg
+    /*
+     TS-1: Validate successful profile picture upload
 
-  The successful execution indicates that the image upload flow works correctly.
-*/
+     This test navigates to the "My Info" section of the application and
+     performs a profile picture upload. It simulates a real user action
+     of changing the profile image by:
+     - Clicking on the "My Info" tab in the sidebar
+     - Selecting the existing profile image
+     - Triggering the upload option
+     - Uploading a new image from the local file system
+     - Saving the updated profile picture
+     - Return the successfully update msg
 
-  test("TS-1: Validate successful profile picture upload", async ({ page }) => {
-    await myinfoPage.myinfo();
-    //await page.locator("//p[contains(@class,'toast-message')]").waitFor({state : 'visible'});
-    const msg = await page.locator("//p[contains(@class,'toast-message')]").innerText();
-    expect(msg).toContain("Successfully Updated");
-  });
+     The successful execution indicates that the image upload flow works correctly.
+    */
 
-  /*
-  TS-2: Ensure admin can edit user records
+    test("TS-1: Validate successful profile picture upload", async ({ page }) => {
+        await myInfoPage.myInfo();
+        await verifyMyInfoPage(page);
+    });
 
-  This test verifies that an admin user is able to initiate the edit process
-  for a user record from the Admin section. It performs the following actions:
+    /*
+     TS-2: Verify admin can edit Employment Status
 
-  - Navigates to the Admin section using the Admin link
-  - Clicks on the edit button corresponding to a user entry
+     Purpose:
+     Ensure that an admin user can update an Employment Status
+     from the Admin -> Job section.
 
-  The test confirms that the edit user interface becomes accessible, indicating
-  that the edit flow is properly triggered.
-*/
+     Steps:
+     1. Navigate to Admin -> Job -> Employment Status.
+     2. Edit an existing Employment Status with a new name.
+     3. Save and verify the updated status is displayed.
+    */
 
-  test("TS-2: Ensure admin can edit user records", async ({ page }) => {
-    await adminPage.AdminEdit();
-    const ret = await page.locator("//h6[text()='Edit User']").innerText();
-    expect(ret).toContain("Edit User");
-  });
+    test("TS-2: Verify admin can edit Employment Status", async ({ page }) => {
+        await adminPage.EditEmpStatus(name);
+        await verifyEditEmpStatus(page, name);
+    });
 
-  /*
-  TS-3: Verify admin user list sorting functionality
+    /*
+     TS-3: Verify admin can add Employment Status
 
-  This test ensures that the admin panel's sorting feature works correctly
-  for the username column. It follows these steps:
+     Purpose:
+     Ensure that an admin user can add a new Employment Status
+     under Admin -> Job -> Employment Status.
 
-  - Navigates to the Admin section and applies ascending sort on usernames
-  - Retrieves the list of user roles after sorting via the page object method
-  - Independently fetches the user roles from the DOM for cross-verification
-  - Trims the text content to normalize spacing and formatting
-  - Validates both retrieved lists to ensure correct alphabetical sorting
+     Steps:
+     1. Navigate to Admin -> Job -> Employment Status.
+     2. Add a new Employment Status with a unique name.
+     3. Save and confirm the new status appears in the list.
+    */
 
-  This test verifies the integrity of frontend sorting behavior in the user list.
-*/
+    test("TS-3: Verify admin can add Employment Status", async ({ page }) => {
+        await adminPage.AddEmpstaus(empstaus);
+        await verifyAddEmpStatus(page);
+    });
 
-  test("TS-3: Verify admin user list sorting functionality", async ({
-    page,
-  }) => {
-    const trimmedRoles = await adminPage.adminSortUsername();
-    expect((await page.locator('.bi-sort-alpha-down').nth(0))).toBeVisible();
-    // expect(trimmedRoles.length).toBeGreaterThan(1);
-    // await assertSortedList(trimmedRoles);
-   
-  });
+    /*
+     TS-4: Confirm new tab opens upon clicking the "Upgrade" button
 
-  /*
-  TS-4: Confirm new tab opens upon clicking the 'Upgrade' button
+     This test verifies that clicking the "Upgrade" button in the Admin section
+     successfully opens a new browser tab (or window). It performs the following:
+     - Navigates to the Admin section
+     - Clicks the "Upgrade" button
+     - Waits for a new tab (child page) to open
+     - Retrieves the URL of the newly opened tab
 
-  This test verifies that clicking the "Upgrade" button in the Admin section
-  successfully opens a new browser tab (or window). It performs the following:
+     The test ensures that external upgrade navigation behaves as expected
+     and the correct redirection occurs in a new tab.
+    */
 
-  - Navigates to the Admin section
-  - Clicks the "Upgrade" button
-  - Waits for a new tab (child page) to open
-  - Retrieves the URL of the newly opened tab
+    test(
+        'TS-4: Confirm new tab opens upon clicking the "Upgrade" button',
+        async ({ page, context }) => {
+            await adminPage.upgrade();
+            expect(context.pages().length).toBe(2);
+        }
+    );
 
-  The test ensures that external upgrade navigation behaves as expected
-  and the correct redirection occurs in a new tab.
-*/
+    /*
+     TS-5: Validate tooltip visibility on hovering over 'Help' button
 
-  test("TS-4: Confirm new tab opens upon clicking the 'Upgrade' button", async ({
-    page, context
-  }) => {
-    await adminPage.upgrade();
-    expect(context.pages().length).toBe(2);
-    
-  });
+     This test checks the UI behavior for the 'Help' button tooltip in the
+     "My Info" section. It ensures that helpful contextual information is
+     displayed when users hover over the help icon.
 
-  /*
-  TS-5: Validate tooltip visibility on hovering over 'Help' button
+     The test performs the following steps:
+     - Navigates to the MyInfo section
+     - Hovers over the 'Help' button located in the top bar
+     - Waits briefly to allow the tooltip to appear
+     - Retrieves the tooltip text using the 'title' attribute
+     - Passes the text for validation to confirm tooltip visibility and content
 
-  This test checks the UI behavior for the 'Help' button tooltip in the
-  "My Info" section. It ensures that helpful contextual information is 
-  displayed when users hover over the help icon.
+     This ensures the presence and correctness of accessibility/help features.
+    */
 
-  The test performs the following steps:
-  - Navigates to the Myinfo section 
-  - Hovers over the 'Help' button located in the top bar
-  - Waits briefly to allow the tooltip to appear
-  - Retrieves the tooltip text using the 'title' attribute
-  - Passes the text for validation to confirm tooltip visibility and content
+    test(
+        "TS-5: Validate tooltip visibility on hovering over 'Help' button",
+        async ({ page }) => {
+            await myInfoPage.helpHover();
+            await verifyHelpHover(page);
+        }
+    );
 
-  This ensures the presence and correctness of accessibility/help features.
-*/
+    /*
+     TS-6: Confirm admin can access Module Configuration
 
-  test("TS-5: Validate tooltip visibility on hovering over 'Help' button", async ({
-    page,
-  }) => {
-    await myinfoPage.helpHover();
-    const tooltipText = await page.locator(
-      "//div[@class='oxd-topbar-body-nav-slot']/button"
-    ).getAttribute("title");
-    expect(page.url()).toContain('pim/viewPersonalDetails');
-    expect(tooltipText).toBe("Help");
-  });
+     This test verifies that an admin user can navigate to the
+     Module Configuration section. It performs the following steps:
+     - Navigates to the Admin section
+     - Opens the Configuration tab
+     - Selects the Module sub-tab
 
-  /*
-  TS-6: Confirm admin search functionality filters correct roles
+     The test confirms that the "Module Configuration" page is displayed.
+    */
 
-  This test verifies the search filter functionality on the Admin page,
-  specifically ensuring that selecting the "Admin" role from the dropdown
-  filters and displays only users with that role.
+    test("TS-6: Confirm admin can access Module Configuration", async ({ page }) => {
+        await adminPage.adminModules();
+        await verifyAdminModules(page);
+    });
 
-  The test performs the following steps:
+    /*
+     TS-7: Validate photo sharing functionality with confirmation message
 
-  - Navigates to the Admin section
-  - Selects "Admin" from the user role dropdown filter
-  - Clicks the Search button to trigger the filtering
-  - Retrieves the list of user roles from the search result
+     This test validates that a user can successfully share a photo post
+     on the Buzz page and that the action is accompanied by a confirmation
+     (in this case, the actual posted comment text).
 
-  The role list is then validated to ensure all displayed users belong
-  to the "Admin" role category, confirming the accuracy of search filtering.
-*/
-  test("TS-6: Confirm admin search functionality filters correct roles", async ({
-    page,
-  }) => {
-    await adminPage.adminSearchVerify();
-    const roles = await page.locator('//div[@role="rowgroup"][2]//div[@role="cell"][3]/div').allInnerTexts();
-    expect(roles.length).toBeGreaterThan(1);
-    for (const role of roles) {
-    expect(role?.trim()).toBe("Admin");
-   
-    }
-  });
+     The test performs the following actions:
+     - Navigates to the Buzz page
+     - Clicks the "Share Photos" button
+     - Enters a unique comment with a timestamp
+     - Uploads an image file from local storage
+     - Submits the post
+     - Reloads the page to reflect the new post
 
-  /*
-  TS-7: Validate photo sharing functionality with confirmation message
+     This test ensures that the photo post functionality works correctly
+     and that the user's comment is properly associated with the shared photo.
+    */
 
-  This test validates that a user can successfully share a photo post
-  on the Buzz page and that the action is accompanied by a confirmation
-  (in this case, the actual posted comment text).
+    test(
+        "TS-7: Validate photo sharing functionality with confirmation message",
+        async ({ page }) => {
+            const comment = `cmnt${Date.now()}`;
+            await buzzpage.SharePhotoPost(comment);
+            await verifySharedPhoto(page, comment);
+        }
+    );
 
-  The test performs the following actions:
+    /*
+     TS-8: Verify 'Most Commented Posts' tab selection
 
-  - Navigates to the Buzz page
-  - Clicks the "Share Photos" button
-  - Enters a unique comment with a timestamp
-  - Uploads an image file from local storage
-  - Submits the post
-  - Reloads the page to reflect the new post
-  -
+     This test ensures that when a user clicks the
+     "Most Commented Posts" tab in the Buzz section,
+     the tab is correctly activated (highlighted).
 
-  This test ensures that the photo post functionality works correctly
-  and that the user's comment is properly associated with the shared photo.
-*/
+     Steps:
+     - Navigates to the Buzz section
+     - Clicks the "Most Commented Posts" tab
+     - Verifies that the tab has the active class applied
+    */
 
-  test("TS-7: Validate photo sharing functionality with confirmation message", async ({
-    page,
-  }) => {
-    const commnt = `cmnt${Date.now()}`
-    await buzzPage.SharePhotoPost(commnt);
-    const commentText = await page.locator("//div[@class='orangehrm-buzz-post-body']/p[1]").allInnerTexts();
-    expect(commentText.length).toBeGreaterThan(1);
-    expect(commentText).toContain(commnt);
- 
-  });
+    test(
+        "TS-8: Verify 'Most Commented Posts' tab selection",
+        async ({ page }) => {
+            await buzzpage.mostcommentTab();
+            await verifyMostCommentTab(page);
+        }
+    );
 
-  /*
-  TS-8: Verify 'Like' button increments like count
+    /*
+     TS-9: Ensure comment can be successfully added to a post
 
-  This test ensures the functionality of the 'Like' feature on the Buzz page.
-  It validates whether clicking the 'Like' button on a post correctly updates
-  the like count shown to the user.
+     This test verifies the functionality of adding a comment to a post
+     on the Buzz page. It confirms that the comment is submitted and
+     appears correctly in the comment list.
 
-  The test performs the following steps:
+     The test follows these steps:
+     - Navigates to the Buzz section
+     - Clicks on the comment button for the first post
+     - Fills in a unique comment using a timestamped message
+     - Submits the comment by pressing Enter
+     - Retrieves the most recent comment
+     - Collects all comment elements on the page
+     - Verifies that the posted comment is present in the list
 
-  - Navigates to the Buzz section
-  - Fetches the current like count on the first visible post
-  - Clicks the 'Like' button
-  - Retrieves the updated like count
-  - Validates that the count has increased after the click
+     This ensures the comment submission flow is working correctly and
+     the UI reflects the new comment as expected.
+    */
 
-  This test confirms that the like interaction works and reflects immediately in the UI.
-*/
+    test(
+        "TS-9: Ensure comment can be successfully added to a post",
+        async ({ page }) => {
+            const comment = `cmnt${Date.now()}`;
+            await buzzpage.addCommentToPost(comment);
+            await verifyAddComment(page, comment);
+        }
+    );
 
-  test.only("TS-8: Verify 'Like' button increments like count", async ({ page }) => {
-    await buzzPage.navigateToBuzzModule();
-    const statText= await page.locator("[class='orangehrm-buzz-stats-row']:nth-child(1)>p").nth(0).textContent();
-    const initialNumber = parseInt(statText?.match(/\d+/)?.[0] || "0", 10);
-    await buzzPage.likePost();
-    const  updatedStatText = await page.locator("[class='orangehrm-buzz-stats-row']:nth-child(1)>p").nth(0).textContent();
-    const updatedNumber = parseInt(updatedStatText?.match(/\d+/)?.[0] || "0",10);
-    await assertLikeCountIncreased(initialNumber, updatedNumber);
-    await page.locator('//div[@class="orangehrm-like-animation"]').nth(0).click();
-  });
+    /*
+     TS-10: Verify post content can be edited successfully
 
-  /*
-  TS-9: Ensure comment can be successfully added to a post
+     This test validates that the edit functionality on a Buzz post works
+     as expected. It ensures that a user can modify the content of an
+     existing post and that the updated content is reflected in the UI.
 
-  This test verifies the functionality of adding a comment to a post 
-  on the Buzz page. It confirms that the comment is submitted and 
-  appears correctly in the comment list.
+     Test steps:
+     - Navigates to the Buzz section
+     - Opens the options menu for the most recent post
+     - Selects the edit option
+     - Clears the existing post content
+     - Fills in the new predefined post content (editPostText)
+     - Saves the updated post
+     - Verifies that the post now displays the updated content
 
-  The test follows these steps:
+     The success of this test confirms that users can update their shared posts
+     and that those changes persist correctly.
+    */
 
-  - Navigates to the Buzz section
-  - Clicks on the comment button for the first post
-  - Fills in a unique comment using a timestamped message
-  - Submits the comment by pressing Enter
-  - Retrieves the most recent comment text
-  - Collects all comment elements on the page
-  - Verifies that the posted comment is present in the list
-
-  This ensures the comment submission flow is working correctly and 
-  the UI reflects the new comment as expected.
-*/
-
-  test("TS-9: Ensure comment can be successfully added to a post", async ({
-    page,
-  }) => {
-     const commnt = `cmnt${Date.now()}`
-    await buzzPage.addCommentToPost(commnt);
-     const postedComment = await page.locator("span.orangehrm-post-comment-text").allInnerTexts();
-    expect(postedComment.length).toBeGreaterThanOrEqual(1);
-    expect(postedComment).toContain(commnt);
-    
-  });
-
-  /*
-  TS-10: Verify post content can be edited successfully
-
-  This test validates that the edit functionality on a Buzz post works as expected. 
-  It ensures that a user can modify the content of an existing post and that the 
-  updated content is reflected in the UI.
-
-  Test steps:
-  - Navigates to the Buzz section
-  - Opens the options menu for the most recent post
-  - Selects the edit option
-  - Clears the existing post content
-  - Fills in the new predefined post content (editPostText)
-  - Saves the updated post
-  - Verifies that the post now displays the updated content
-
-  The success of this test confirms that users can update their shared posts 
-  and that those changes persist correctly.
-*/
-
-  test("TS-10: Verify post content can be edited successfully", async ({
-    page,
-  }) => {
-     const commnt = `Ecmnt${Date.now()}`
-    await buzzPage.editPost(commnt);
-    const updatedText = await page.locator("//div[@class='orangehrm-buzz-post-body']/p").first().textContent();
-    expect(updatedText?.length || 0).toBeGreaterThanOrEqual(1);
-    expect(updatedText).toContain(commnt);
-   
-  });
+    test(
+        "TS-10: Verify post content can be edited successfully",
+        async ({ page }) => {
+            const commnt = `Ecmnt${Date.now()}`;
+            await buzzpage.editPost(commnt);
+            await verifyEditedPost(commnt, editPostText, page);
+        }
+    );
 });
 
-/**
- * ------------------------------------------------------Helper Methods----------------------------------------------------
- */
+// -------------------------------------------------------------
+// Helper Methods
+// -------------------------------------------------------------
+
+// Verify function for TS-10
+async function verifyEditedPost(
+    actualText: string,
+    expectedText: string,
+    page: Page
+) {
+    const updatedText = await page
+        .locator('//div[@class="orangehrm-buzz-post-body"]/p')
+        .first()
+        .textContent();
+
+    expect(updatedText?.length || 0).toBeGreaterThanOrEqual(1);
+    expect(updatedText).toContain(actualText);
+}
+
+// Verify function for TS-9
+async function verifyAddComment(page: Page, comment: string) {
+    await page
+        .locator("span.orangehrm-post-comment-text")
+        .nth(0)
+        .waitFor({ state: "visible" });
+
+    const postedComment = await page
+        .locator("span.orangehrm-post-comment-text")
+        .allInnerTexts();
+
+    expect(postedComment.length).toBeGreaterThanOrEqual(1);
+    expect(postedComment).toContain(comment);
+}
+
+// Verify function for TS-8
+async function verifyMostCommentTab(page: Page) {
+    const result = await page
+        .locator('//button[normalize-space()="Most Commented Posts"]')
+        .getAttribute("class");
+
+    expect(result).toBe(
+        "oxd-button oxd-button--medium oxd-button--label-warn orangehrm-post-filters-button"
+    );
+}
+
+// Verify function for TS-7
+async function verifySharedPhoto(page: Page, comment: string) {
+    const commentText = await page
+        .locator('//div[@class="orangehrm-buzz-post-body"]/p[1]')
+        .allInnerTexts();
+
+    expect(commentText.length).toBeGreaterThan(1);
+    expect(commentText).toContain(comment);
+}
+
+// Verify function for TS-6
+async function verifyAdminModules(page: Page) {
+    const result = await page
+        .locator('//h6[text()="Module Configuration"]')
+        .allInnerTexts();
+
+    expect(result).toContain("Module Configuration");
+}
+
+// Verify function for TS-5
+async function verifyHelpHover(page: Page) {
+    const tooltipText = await page
+        .locator('//div[@class="oxd-topbar-body-nav-slot"]/button')
+        .getAttribute("title");
+
+    expect(page.url()).toContain("pim/viewPersonalDetails");
+    expect(tooltipText).toBe("Help");
+}
+
+// Verify function for TS-3
+async function verifyAddEmpStatus(page: Page) {
+    const verify = await page
+        .locator(`//div[text()="${empstaus}"]`)
+        .allTextContents();
+
+    expect(verify).toContain(empstaus);
+}
+
+// Verify function for TS-2
+async function verifyEditEmpStatus(page: Page, name: string) {
+    const verify = await page
+        .locator(`//div[text()="${name}"]`)
+        .allTextContents();
+
+    expect(verify).toContain(name);
+}
+
+// Verify function for TS-1
+async function verifyMyInfoPage(page: Page) {
+    const msg = await page
+        .locator("//p[contains(@class,'toast-message')]")
+        .innerText();
+
+    expect(msg).toContain("Successfully Updated");
+}
+
+const empstaus = `ES${Date.now()}`;
+
+const timestamp = Date.now();
+const name = `edit${timestamp}`;
 
 // Assert that profile picture upload shows a success toast
 async function assertProfilePicUploadSuccess(page: Page) {
-  await expect(
-    page.locator("//p[contains(@class,'toast-message')]")
-  ).toContainText("Successfully Updated");
+    await expect(
+        page.locator("//p[contains(@class,'toast-message')]")
+    ).toContainText("Successfully Updated");
 }
 
 // Assert that Edit User header is visible on admin edit
 async function assertEditUserHeaderVisible(page: Page) {
-  await expect(page.locator("//h6[text()='Edit User']")).toBeVisible();
+    await expect(
+        page.locator('//h6[text()="Edit User"]')
+    ).toBeVisible();
 }
-
 
 // Assert that tooltip text on hover is as expected
 
-
 // Assert that a specific comment is present in the comment list
-async function assertCommentExists(postedComment: string, cmntList: string[]) {
-  expect(cmntList.some((c) => c.trim() === postedComment.trim())).toBe(true);
+async function assertCommentExists(
+    postedComment: string,
+    commentList: string[]
+) {
+    expect(
+        commentList.some((c) => c.trim() === postedComment.trim())
+    ).toBe(true);
 }
 
 // Assert that a post was successfully edited
 async function assertEditedPost(
-  actualText: string,
-  expectedText: string,
-  page: Page
+    actualText: string,
+    expectedText: string,
+    page: Page
 ) {
-  expect(actualText.trim()).toBe(expectedText.trim());
-  await expect(
-    page.locator("//p[contains(@class,'toast-message')]")
-  ).toContainText("Successfully Updated");
+    expect(actualText.trim()).toBe(expectedText.trim());
+
+    await expect(
+        page.locator("//p[contains(@class,'toast-message')]")
+    ).toContainText("Successfully Updated");
 }
 
 // Assert that the list is sorted in ascending order
 async function assertSortedList(actualList: string[]) {
-  for (let i = 0; i < actualList.length - 1; i++) {
-    if (actualList[i].localeCompare(actualList[i + 1]) > 0) {
-      throw new Error(
-        `List is not sorted at index ${i}: '${actualList[i]}' > '${
-          actualList[i + 1]
-        }'`
-      );
+    for (let i = 0; i < actualList.length - 1; i++) {
+        if (actualList[i].localeCompare(actualList[i + 1]) > 0) {
+            throw new Error(
+                `List is not sorted at index ${i}: "${actualList[i]}" > "${actualList[i + 1]}"`
+            );
+        }
     }
-  }
 }
 
 // Test data: updated comment text for editing a post
 const editPostText = "this is edit post comment";
 
 // Expected URL when 'Upgrade' is clicked
-const newPageUrl = "https://orangehrm.com/open-source/upgrade-to-advanced";
+const refpageUrl =
+    "https://orangehrm.com/open-source/upgrade-to-advanced";
 
 // Assert that a comment was posted correctly
-async function assertCommentIsPosted(actual: string, expected: string) {
-  expect(actual).toBe(expected);
+async function assertCommentIsPosted(
+    actual: string,
+    expected: string
+) {
+    expect(actual).toBe(expected);
 }
 
 // Assert that the number of likes increased after clicking Like
 async function assertLikeCountIncreased(
-  initialNumber: number,
-  updatedNumber: number
+    initialNumber: number,
+    updatedNumber: number
 ) {
-  expect(updatedNumber).toBeGreaterThan(initialNumber);
+    expect(updatedNumber).toBeGreaterThan(initialNumber);
 }
-

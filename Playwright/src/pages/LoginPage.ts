@@ -47,7 +47,7 @@ export class LoginPage {
         await this.passwordInput.fill(data.ValidLogin.ValidPassword);
         await this.common.highlightElement(this.loginButton);
         await this.loginButton.click();
-        await this.page.waitForURL(/dashboard/);
+        await this.page.waitForURL(/dashboard/, { waitUntil: "domcontentloaded" });
         await this.admin.waitFor({ state: "visible" });
     }
 }

@@ -35,23 +35,23 @@ export default class buzzPage {
     constructor(page: Page) {
         this.page = page;
         this.mostCmntTab = page.locator('//button[normalize-space()="Most Commented Posts"]');
-        this.buzzLink = page.locator('//span[text()="Buzz"]');
-        this.sharephoto = page.locator('//button[normalize-space()="Share Photos"]');
+        this.buzzLink = page.locator('//span[contains(@class,"oxd-main-menu-item--name") and normalize-space()="Buzz"]');
+        this.sharephoto = page.locator('//button[contains(normalize-space(),"Share Photos")]');
         this.buzzImage = page.locator('//div[@role="document"]//input[@type="file"]');
 
         this.submitButton = page.locator('//div[@role="document"]//button[@type="submit"]');
         this.successMessage = page.locator('//p[contains(@class,"toast-message")]');
         this.photoComment = page.locator('//div[@role="document"]//textarea');
 
-        this.firstPostFooter = page.locator('(//div[@class="orangehrm-buzz-post-footer"])[1]');
+        this.firstPostFooter = page.locator('(//div[contains(@class,"orangehrm-buzz-post-footer")])[1]');
         this.likeCount = this.firstPostFooter.locator(".orangehrm-buzz-stats-row p").first();
-        this.likeButton = this.page.locator('(//div[@class="orangehrm-buzz-post-actions"]/div)[1]');
-        this.commentInput = this.page.locator('//input[@placeholder="Write your comment..."]');
+        this.likeButton = this.page.locator('(//div[contains(@class,"orangehrm-buzz-post-actions")]/div)[1]');
+        this.commentInput = this.page.locator('//input[contains(@placeholder,"Write your comment")]').first();
         this.firstCommentButton = this.page.locator('(//i[contains(@class,"bi-chat-text-fill")]/parent::button)[1]');
         this.latestComment = this.page.locator("span.orangehrm-post-comment-text").first();
 
-        this.editToggle = page.locator('(//div[@class="orangehrm-buzz-post-header-config"]//button)[1]');
-        this.editButton = page.locator('//p[text()="Edit Post"]');
+        this.editToggle = page.locator('(//div[contains(@class,"orangehrm-buzz-post-header-config")]//button)[1]');
+        this.editButton = page.locator('//p[normalize-space()="Edit Post"]');
         this.postEdit = this.page.locator('//div[@role="document"]//textarea');
         this.postButton = this.page.locator('//div[@role="document"]//button[@type="submit"]');
         this.verifyCmnt = this.page.locator("span.orangehrm-post-comment-text");
@@ -64,7 +64,7 @@ export default class buzzPage {
     private async openBuzz() {
         await this.common.highlightElement(this.buzzLink);
         await this.buzzLink.click();
-        await this.page.waitForURL(/buzz\/viewBuzz/);
+        await this.page.waitForURL(/buzz\/viewBuzz/, { waitUntil: "domcontentloaded" });
         await this.cmt.first().waitFor({ state: "visible" });
     }
 

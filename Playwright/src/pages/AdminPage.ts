@@ -39,7 +39,7 @@ export default class AdminPage {
         this.jobCatbtn = page.locator('//a[normalize-space()="Job Categories"]');
 
         // Initialize all locators
-        this.AdminLink = page.locator('//span[text()="Admin"]');
+        this.AdminLink = page.locator('//span[contains(@class,"oxd-main-menu-item--name") and normalize-space()="Admin"]');
         this.EmpStatusEditbutton = page.locator('//i[contains(@class,"bi-pencil-fill")]/parent::button').nth(0);
         this.fillName = page.locator(".oxd-input").nth(1);
         this.saveBtn = page.locator('//button[@type="submit"]');
@@ -61,13 +61,13 @@ export default class AdminPage {
     private async openEmploymentStatus() {
         await this.common.highlightElement(this.AdminLink);
         await this.AdminLink.click();
-        await this.page.waitForURL(/admin\/viewSystemUsers/);
+        await this.page.waitForURL(/admin\/viewSystemUsers/, { waitUntil: "domcontentloaded" });
 
         await this.common.highlightElement(this.jobbtn);
         await this.jobbtn.click();
         await this.common.highlightElement(this.EmpStatus);
         await this.EmpStatus.click();
-        await this.page.waitForURL(/admin\/employmentStatus/);
+        await this.page.waitForURL(/admin\/employmentStatus/, { waitUntil: "domcontentloaded" });
     }
 
     /**
@@ -81,7 +81,7 @@ export default class AdminPage {
 
         await this.common.highlightElement(this.EmpStatusEditbutton);
         await this.EmpStatusEditbutton.click();
-        await this.page.waitForURL(/admin\/saveEmploymentStatus/);
+        await this.page.waitForURL(/admin\/saveEmploymentStatus/, { waitUntil: "domcontentloaded" });
 
         await expect(this.fillName).not.toHaveValue("");
         await this.common.highlightElement(this.fillName);
@@ -89,7 +89,7 @@ export default class AdminPage {
         await this.common.highlightElement(this.saveBtn);
         await this.saveBtn.click();
 
-        await this.page.waitForURL(/admin\/employmentStatus/);
+        await this.page.waitForURL(/admin\/employmentStatus/, { waitUntil: "domcontentloaded" });
         await expect(this.page.locator(`//div[text()="${name}"]`)).toBeVisible();
     }
 
@@ -103,14 +103,14 @@ export default class AdminPage {
 
         await this.common.highlightElement(this.Addbtn);
         await this.Addbtn.click();
-        await this.page.waitForURL(/admin\/saveEmploymentStatus/);
+        await this.page.waitForURL(/admin\/saveEmploymentStatus/, { waitUntil: "domcontentloaded" });
 
         await this.common.highlightElement(this.fillName);
         await this.fillName.fill(name);
         await this.common.highlightElement(this.saveBtn);
         await this.saveBtn.click();
 
-        await this.page.waitForURL(/admin\/employmentStatus/);
+        await this.page.waitForURL(/admin\/employmentStatus/, { waitUntil: "domcontentloaded" });
         await expect(this.page.locator(`//div[text()="${name}"]`)).toBeVisible();
     }
 
@@ -121,7 +121,7 @@ export default class AdminPage {
     public async upgrade() {
         await this.common.highlightElement(this.AdminLink);
         await this.AdminLink.click();
-        await this.page.waitForURL(/admin\/viewSystemUsers/);
+        await this.page.waitForURL(/admin\/viewSystemUsers/, { waitUntil: "domcontentloaded" });
 
         await this.common.highlightElement(this.upgradeButton);
         const [childPage] = await Promise.all([
@@ -139,15 +139,15 @@ export default class AdminPage {
     public async adminModules() {
         await this.common.highlightElement(this.AdminLink);
         await this.AdminLink.click();
-        await this.page.waitForURL(/admin\/viewSystemUsers/);
+        await this.page.waitForURL(/admin\/viewSystemUsers/, { waitUntil: "domcontentloaded" });
 
         await this.common.highlightElement(this.configTab);
         await this.configTab.click();
         await this.common.highlightElement(this.modulesSubTab);
         await this.modulesSubTab.click();
 
-        await this.page.waitForURL(/admin\/viewModules/);
-        const header = this.page.locator('//h6[text()="Module Configuration"]');
+        await this.page.waitForURL(/admin\/viewModules/, { waitUntil: "domcontentloaded" });
+        const header = this.page.locator('//h6[normalize-space()="Module Configuration"]');
         await expect(header).toBeVisible();
         return await header.allInnerTexts();
     }
